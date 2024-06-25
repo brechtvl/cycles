@@ -202,6 +202,10 @@ macro(cycles_install_libraries target)
     DESTINATION ${PLATFORM_LIB_INSTALL_DIR}
     CONFIGURATIONS Debug
   )
+
+    message(STATUS "RELEASE ${PLATFORM_BUNDLED_LIBRARIES_RELEASE}")
+    message(STATUS "DEBUG ${PLATFORM_BUNDLED_LIBRARIES_DEBUG}")
+
 endmacro()
 
 macro(set_and_warn_library_found

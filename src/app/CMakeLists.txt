@@ -134,7 +134,7 @@ if(WITH_CYCLES_STANDALONE)
 
   add_test(
     NAME cycles_version
-    COMMAND ${CMAKE_INSTALL_PREFIX}/$<TARGET_FILE_NAME:cycles> --version)
+    COMMAND "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb" -c "g;q" ${CMAKE_INSTALL_PREFIX}/$<TARGET_FILE_NAME:cycles> --version)
 endif()
 
 if(WITH_CYCLES_PRECOMPUTE)
