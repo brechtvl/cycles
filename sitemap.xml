@@ -3,13 +3,10 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://www.cycles-renderer.org/</loc>
-    <priority>0</priority>
   </url><url>
     <loc>https://www.cycles-renderer.org/development/</loc>
-    <priority>0</priority>
   </url><url>
     <loc>https://www.cycles-renderer.org/features/</loc>
-    <priority>0</priority>
   </url><url>
     <loc>https://www.cycles-renderer.org/categories/</loc>
   </url><url>
