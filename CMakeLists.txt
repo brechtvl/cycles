@@ -241,6 +241,7 @@ option(WITH_STRICT_BUILD_OPTIONS "When requirements for a build option are not m
 include(CheckCXXCompilerFlag)
 include(detect_platform)
 include(external_libs)
+include(dependency_targets)
 include(configure_build)
 include(CTest)
 
