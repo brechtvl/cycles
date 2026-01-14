@@ -185,6 +185,8 @@ if(WITH_USD)
 
   set_and_warn_library_found("USD" USD_FOUND WITH_USD)
 
+  set(WITH_PYTHON ON)
+
   if(WIN32)
     set(PYTHON_VERSION 3.11)
     string(REPLACE "." "" PYTHON_VERSION_NO_DOTS ${PYTHON_VERSION})
