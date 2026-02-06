@@ -205,14 +205,14 @@ ccl_device_inline void osl_eval_nodes(KernelGlobals kg,
   /* For surface shaders, we might have an automatic bump shader that needs to be executed before
    * the main shader to update globals.N. */
   if constexpr (type == SHADER_TYPE_SURFACE) {
-    if (sd->flag & SD_HAS_BUMP) {
+    if (sd->flag & SD_HAS_BUMP_FROM_DISPLACEMENT) {
       /* Save state. */
       const float3 P = sd->P;
       const float dP = sd->dP;
       const packed_float3 dPdx = globals.dPdx;
       const packed_float3 dPdy = globals.dPdy;
 
-      /* Set state as if undisplaced. */
+      /* Set position state as if undisplaced. */
       if (sd->flag & SD_HAS_DISPLACEMENT) {
         const AttributeDescriptor desc = find_attribute(kg, sd, ATTR_STD_POSITION_UNDISPLACED);
         kernel_assert(desc.offset != ATTR_STD_NOT_FOUND);
@@ -227,6 +227,16 @@ ccl_device_inline void osl_eval_nodes(KernelGlobals kg,
         globals.P = sd->P;
         globals.dPdx = P.dx;
         globals.dPdy = P.dy;
+
+        /* Set normal as if undisplaced. */
+        const AttributeDescriptor ndesc = find_attribute(kg, sd, ATTR_STD_NORMAL_UNDISPLACED);
+        if (ndesc.offset != ATTR_STD_NOT_FOUND) {
+          float3 N = safe_normalize(
+              primitive_surface_attribute<float3>(kg, sd, ndesc, false, false).val);
+          object_normal_transform(kg, sd, &N);
+          sd->N = (sd->flag & SD_BACKFACING) ? -N : N;
+          globals.N = sd->N;
+        }
       }
 
       /* Execute bump shader. */

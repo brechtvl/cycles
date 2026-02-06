@@ -463,6 +463,46 @@ endif()
 
 # CUDA module
 
+function(cuda_add_common_flags cuda_version arch in_flags out_flags)
+  set(flags ${in_flags})
+
+  if(CUDA_HOST_COMPILER)
+    set(flags ${flags} -ccbin="${CUDA_HOST_COMPILER}")
+  endif()
+
+  set(flags ${flags}
+    # Helps with compatibility when using recent clang host compiler.
+    "-std=c++17"
+    --use_fast_math
+    -Wno-deprecated-gpu-targets)
+
+  if(WITH_CYCLES_DEBUG)
+    set(flags ${flags}
+      -D WITH_CYCLES_DEBUG
+      --ptxas-options="-v")
+  endif()
+
+  if(WITH_NANOVDB)
+    set(flags ${flags} -D WITH_NANOVDB)
+  endif()
+
+  if("${cuda_version}" GREATER_EQUAL 123 AND "${arch}" STREQUAL "sm_120")
+    # Enable jump table generation for the SVM switch statement.
+    set(flags ${flags} --jump-table-density 80)
+  endif()
+
+  if(NOT WITH_CYCLES_CUDA_BUILD_SERIAL AND "${cuda_version}" GREATER_EQUAL 129)
+    # Only use split compile with few binaries, to avoid excessive memory usage.
+    # This is mainly helpful for quick local builds for one architecture.
+    list(LENGTH CYCLES_CUDA_BINARIES_ARCH _num_binaries)
+    if(_num_binaries LESS_EQUAL 2)
+      set(flags ${flags} --split-compile=0)
+    endif()
+  endif()
+
+  set(${out_flags} ${flags} PARENT_SCOPE)
+endfunction()
+
 if(WITH_CYCLES_CUDA_BINARIES)
   # 64 bit only
   set(CUDA_BITS 64)
@@ -520,33 +560,9 @@ if(WITH_CYCLES_CUDA_BINARIES)
       -m ${CUDA_BITS}
       -I ${CMAKE_CURRENT_SOURCE_DIR}/..
       -I ${CMAKE_CURRENT_SOURCE_DIR}/device/cuda
-      --use_fast_math
-      -o ${CMAKE_CURRENT_BINARY_DIR}/${cuda_file}
-      -Wno-deprecated-gpu-targets)
+      -o ${CMAKE_CURRENT_BINARY_DIR}/${cuda_file})
 
-    if(CUDA_HOST_COMPILER)
-      set(cuda_flags ${cuda_flags}
-        -ccbin="${CUDA_HOST_COMPILER}")
-    endif()
-
-    if(WITH_NANOVDB)
-      set(cuda_flags ${cuda_flags}
-        -D WITH_NANOVDB)
-    endif()
-
-    if(WITH_CYCLES_DEBUG)
-      set(cuda_flags ${cuda_flags}
-        -D WITH_CYCLES_DEBUG
-        --ptxas-options="-v")
-    endif()
-
-    if(NOT WITH_CYCLES_CUDA_BUILD_SERIAL AND "${cuda_version}" GREATER_EQUAL 129)
-      set(cuda_flags ${cuda_flags}
-        --split-compile=0)
-    endif()
-
-    # Helps with compatibility when using recent clang host compiler.
-    set(cuda_flags ${cuda_flags} -std=c++17)
+    cuda_add_common_flags(${cuda_version} ${arch} "${cuda_flags}" cuda_flags)
 
     set(_cuda_nvcc_args
       -arch=${arch}
@@ -832,28 +848,11 @@ if(WITH_CYCLES_CUDA_BINARIES AND WITH_CYCLES_DEVICE_OPTIX)
       -I "${OPTIX_INCLUDE_DIR}"
       -I "${CMAKE_CURRENT_SOURCE_DIR}/.."
       -I "${CMAKE_CURRENT_SOURCE_DIR}/device/cuda"
-      --use_fast_math
-      -Wno-deprecated-gpu-targets
       -o ${output})
-
-    if(CUDA_HOST_COMPILER)
-      set(cuda_flags ${cuda_flags}
-        -ccbin="${CUDA_HOST_COMPILER}")
-    endif()
-
-    if(WITH_NANOVDB)
-      set(cuda_flags ${cuda_flags}
-        -D WITH_NANOVDB)
-    endif()
 
     if(WITH_CYCLES_OSL)
       set(cuda_flags ${cuda_flags}
         -D OSL_LIBRARY_VERSION_CODE=${OSL_LIBRARY_VERSION_CODE})
-    endif()
-
-    if(WITH_CYCLES_DEBUG)
-      set(cuda_flags ${cuda_flags}
-        -D WITH_CYCLES_DEBUG)
     endif()
 
     set(arch compute_50)
@@ -869,10 +868,7 @@ if(WITH_CYCLES_CUDA_BINARIES AND WITH_CYCLES_DEVICE_OPTIX)
       endif()
     endif()
 
-    if(NOT WITH_CYCLES_CUDA_BUILD_SERIAL AND "${cuda_version}" GREATER_EQUAL 129)
-      set(cuda_flags ${cuda_flags}
-        --split-compile=0)
-    endif()
+    cuda_add_common_flags(${cuda_version} ${arch} "${cuda_flags}" cuda_flags)
 
     add_custom_command(
       OUTPUT
@@ -887,7 +883,6 @@ if(WITH_CYCLES_CUDA_BINARIES AND WITH_CYCLES_DEVICE_OPTIX)
       COMMAND
         ${cuda_nvcc_executable}
         --ptx
-        -std=c++17
         -arch=${arch}
         ${cuda_flags}
         ${input}

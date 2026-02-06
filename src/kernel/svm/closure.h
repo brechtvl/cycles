@@ -64,9 +64,12 @@ ccl_device
   const uint4 data_node = read_node(kg, &offset);
 
   /* Only compute BSDF for surfaces, transparent variable is shared with volume extinction. */
+  if constexpr (shader_type != SHADER_TYPE_SURFACE) {
+    return svm_node_closure_bsdf_skip(kg, offset, type);
+  }
   IF_KERNEL_NODES_FEATURE(BSDF)
   {
-    if ((shader_type != SHADER_TYPE_SURFACE) || mix_weight == 0.0f) {
+    if (mix_weight == 0.0f) {
       return svm_node_closure_bsdf_skip(kg, offset, type);
     }
   }
@@ -1502,9 +1505,9 @@ ccl_device void svm_node_closure_weight(ccl_private float *stack,
   *closure_weight = rgb_to_spectrum(stack_load_float3(stack, weight_offset));
 }
 
-ccl_device_noinline void svm_node_emission_weight(ccl_private float *stack,
-                                                  ccl_private Spectrum *closure_weight,
-                                                  const uint4 node)
+ccl_device void svm_node_emission_weight(ccl_private float *stack,
+                                         ccl_private Spectrum *closure_weight,
+                                         const uint4 node)
 {
   const uint color_offset = node.y;
   const uint strength_offset = node.z;

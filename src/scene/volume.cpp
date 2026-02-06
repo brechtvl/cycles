@@ -640,6 +640,7 @@ void Volume::merge_grids(const Scene *scene)
 VolumeManager::VolumeManager()
 {
   need_rebuild_ = true;
+  need_update_step_size = true;
 }
 
 void VolumeManager::tag_update()
@@ -1064,6 +1065,7 @@ void VolumeManager::flatten_octree(DeviceScene *dscene, const Scene *scene) cons
             << "Mb.";
 }
 
+/* Dump octree as python script, enabled by `CYCLES_VOLUME_OCTREE_DUMP` environment variable. */
 std::string VolumeManager::visualize_octree(const char *filename) const
 {
   const std::string filename_full = path_join(OIIO::Filesystem::current_path(), filename);
@@ -1100,11 +1102,13 @@ std::string VolumeManager::visualize_octree(const char *filename) const
   return filename_full;
 }
 
-void VolumeManager::update_step_size(const Scene *scene, DeviceScene *dscene) const
+void VolumeManager::update_step_size(const Scene *scene, DeviceScene *dscene)
 {
   assert(scene->integrator->get_volume_ray_marching());
 
-  if (!dscene->volume_step_size.is_modified() && last_algorithm == RAY_MARCHING) {
+  if (!need_update_step_size && !dscene->volume_step_size.is_modified() &&
+      !scene->integrator->volume_step_rate_is_modified() && last_algorithm == RAY_MARCHING)
+  {
     return;
   }
 
@@ -1126,6 +1130,7 @@ void VolumeManager::update_step_size(const Scene *scene, DeviceScene *dscene) co
 
   dscene->volume_step_size.copy_to_device();
   dscene->volume_step_size.clear_modified();
+  need_update_step_size = false;
 }
 
 void VolumeManager::device_update(Device *device,
@@ -1163,7 +1168,11 @@ void VolumeManager::device_update(Device *device,
   }
 
   if (update_visualization_) {
-    LOG_DEBUG << "Octree visualization has been written to " << visualize_octree("octree.py");
+    static const bool dump_octree = getenv("CYCLES_VOLUME_OCTREE_DUMP") != nullptr;
+    if (dump_octree) {
+      const std::string octree_path = visualize_octree("octree.py");
+      LOG_INFO << "Octree visualization has been written to " << octree_path;
+    }
     update_visualization_ = false;
   }
 

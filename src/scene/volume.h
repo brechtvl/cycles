@@ -57,6 +57,8 @@ class VolumeManager {
   /* Check whether the shader is a homogeneous volume. */
   static bool is_homogeneous_volume(const Object *, const Shader *);
 
+  bool need_update_step_size;
+
  private:
   /* Initialize octrees from the volumes in the scene. */
   void initialize_octree(const Scene *, Progress &);
@@ -75,12 +77,13 @@ class VolumeManager {
   int num_octree_nodes() const;
   int num_octree_roots() const;
 
-  /* When running Blender with `--log-level debug`, an octree visualization is written to
-   * `filename`, which is a Python script that can be run inside Blender. */
+  /* When running Blender with environment variable `CYCLES_VOLUME_OCTREE_DUMP`, an octree
+   * visualization is written to `filename`, which is a Python script that can be run inside
+   * Blender. */
   std::string visualize_octree(const char *filename) const;
 
   /* Step size for ray marching. */
-  void update_step_size(const Scene *, DeviceScene *) const;
+  void update_step_size(const Scene *, DeviceScene *);
 
   /* One octree per object per shader. */
   std::map<std::pair<const Object *, const Shader *>, std::shared_ptr<Octree>> object_octrees_;

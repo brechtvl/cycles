@@ -97,12 +97,14 @@ Shader::Shader() : Node(get_node_type())
   has_surface_bssrdf = false;
   has_volume = false;
   has_displacement = false;
-  has_bump = false;
+  has_bump_from_displacement = false;
+  has_bump_from_surface = false;
   has_bssrdf_bump = false;
   has_surface_spatial_varying = false;
   has_volume_spatial_varying = false;
   has_volume_attribute_dependency = false;
   has_volume_connected = false;
+  prev_has_surface_shadow_transparency = false;
   prev_volume_step_rate = 0.0f;
   has_light_path_node = false;
 
@@ -117,6 +119,7 @@ Shader::Shader() : Node(get_node_type())
   need_update_uvs = true;
   need_update_attribute = true;
   need_update_displacement = true;
+  shadow_transparency_needs_realloc = true;
 }
 
 static float3 output_estimate_emission(ShaderOutput *output, bool &is_constant)
@@ -308,6 +311,21 @@ void Shader::set_graph(unique_ptr<ShaderGraph> &&graph_)
   has_volume_connected = (graph->output()->input("Volume")->link != nullptr);
 }
 
+bool Shader::has_surface_shadow_transparency() const
+{
+  if (!use_transparent_shadow) {
+    return false;
+  }
+
+  for (ShaderNode *node : graph->nodes) {
+    if (node->has_surface_transparent()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void Shader::tag_update(Scene *scene)
 {
   /* update tag */
@@ -377,6 +395,7 @@ void Shader::tag_update(Scene *scene)
   if (has_displacement) {
     if (displacement_method == DISPLACE_BOTH) {
       attributes.add(ATTR_STD_POSITION_UNDISPLACED);
+      attributes.add(ATTR_STD_NORMAL_UNDISPLACED);
     }
     if (displacement_method_is_modified()) {
       need_update_displacement = true;
@@ -393,9 +412,15 @@ void Shader::tag_update(Scene *scene)
     scene->procedural_manager->tag_update();
   }
 
+  if (prev_has_surface_shadow_transparency != has_surface_shadow_transparency()) {
+    prev_has_surface_shadow_transparency = !prev_has_surface_shadow_transparency;
+    shadow_transparency_needs_realloc = true;
+  }
+
   if (has_volume != prev_has_volume || volume_step_rate != prev_volume_step_rate) {
     scene->geometry_manager->need_flags_update = true;
     scene->object_manager->need_flags_update = true;
+    scene->volume_manager->need_update_step_size = true;
     prev_volume_step_rate = volume_step_rate;
   }
 
@@ -516,12 +541,14 @@ void ShaderManager::device_update_pre(Device * /*device*/,
   for (Shader *shader : scene->shaders) {
     if (shader->is_modified()) {
       ShaderNode *output = shader->graph->output();
-      shader->has_bump = (shader->get_displacement_method() != DISPLACE_TRUE) &&
-                         output->input("Surface")->link && output->input("Displacement")->link;
-      shader->has_bssrdf_bump = shader->has_bump;
+      shader->has_bump_from_displacement = (shader->get_displacement_method() != DISPLACE_TRUE) &&
+                                           output->input("Surface")->link &&
+                                           output->input("Displacement")->link;
+      shader->has_bssrdf_bump = shader->has_bump_from_displacement;
 
-      shader->graph->finalize(
-          scene, shader->has_bump, shader->get_displacement_method() == DISPLACE_BOTH);
+      shader->graph->finalize(scene,
+                              shader->has_bump_from_displacement,
+                              shader->get_displacement_method() == DISPLACE_BOTH);
 
       shader->has_surface = output->input("Surface")->link != nullptr;
       shader->has_surface_transparent = false;
@@ -532,6 +559,7 @@ void ShaderManager::device_update_pre(Device * /*device*/,
       shader->has_volume_spatial_varying = false;
       shader->has_volume_attribute_dependency = false;
       shader->has_displacement = output->input("Displacement")->link != nullptr;
+      shader->has_bump_from_surface = false;
 
       shader->has_light_path_node = false;
       for (ShaderNode *node : shader->graph->nodes) {
@@ -633,8 +661,11 @@ void ShaderManager::device_update_common(Device * /*device*/,
     if (shader->get_volume_interpolation_method() == VOLUME_INTERPOLATION_CUBIC) {
       flag |= SD_VOLUME_CUBIC;
     }
-    if (shader->has_bump) {
-      flag |= SD_HAS_BUMP;
+    if (shader->has_bump_from_displacement) {
+      flag |= SD_HAS_BUMP_FROM_DISPLACEMENT;
+    }
+    if (shader->has_bump_from_surface) {
+      flag |= SD_HAS_BUMP_FROM_SURFACE;
     }
     if (shader->get_displacement_method() != DISPLACE_BUMP) {
       flag |= SD_HAS_DISPLACEMENT;
