@@ -85,6 +85,7 @@ if(EXISTS ${_cycles_lib_dir} AND WITH_LIBS_PRECOMPILED)
   _set_default(Boost_ROOT "${_cycles_lib_dir}/boost")
   _set_default(EMBREE_ROOT_DIR "${_cycles_lib_dir}/embree")
   _set_default(EPOXY_ROOT_DIR "${_cycles_lib_dir}/epoxy")
+  _set_default(fmt_ROOT "${_cycles_lib_dir}/fmt")
   _set_default(IMATH_ROOT_DIR "${_cycles_lib_dir}/imath")
   _set_default(GLEW_ROOT_DIR "${_cycles_lib_dir}/glew")
   _set_default(JPEG_ROOT "${_cycles_lib_dir}/jpeg")
@@ -267,6 +268,7 @@ endif()
 
 find_package(JPEG REQUIRED)
 find_package(TIFF REQUIRED)
+find_package(fmt REQUIRED)
 find_package(WebP)
 
 if(EXISTS ${_cycles_lib_dir})
@@ -284,6 +286,8 @@ endif()
 ###########################################################################
 # OpenEXR
 ###########################################################################
+
+set(WITH_IMAGE_OPENEXR ON)
 
 if(MSVC AND EXISTS ${_cycles_lib_dir})
   set(OpenEXR_ROOT ${OPENEXR_ROOT_DIR})
@@ -601,6 +605,8 @@ endif()
 ###########################################################################
 # TBB
 ###########################################################################
+
+set(WITH_TBB ON)
 
 if(NOT USD_OVERRIDE_TBB)
   if(MSVC AND EXISTS ${_cycles_lib_dir})

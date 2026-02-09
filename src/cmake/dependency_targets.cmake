@@ -65,15 +65,24 @@ if(WITH_OPENVDB)
 endif()
 
 # -----------------------------------------------------------------------------
+# Configure Ceres
+add_library(bf_deps_optional_ceres INTERFACE)
+add_library(bf::dependencies::optional::ceres ALIAS bf_deps_optional_ceres)
+
+if(TARGET Ceres::ceres)
+  target_compile_definitions(bf_deps_optional_ceres INTERFACE WITH_CERES)
+  target_link_libraries(bf_deps_optional_ceres INTERFACE Ceres::ceres)
+endif()
+
+# -----------------------------------------------------------------------------
 # Configure Eigen
 
 add_library(bf_deps_eigen INTERFACE)
 add_library(bf::dependencies::eigen ALIAS bf_deps_eigen)
-
-target_include_directories(bf_deps_eigen SYSTEM INTERFACE ${EIGEN3_INCLUDE_DIRS})
+target_link_libraries(bf_deps_eigen INTERFACE Eigen3::Eigen)
 
 if(WITH_TBB)
-  target_compile_definitions(bf_deps_eigen INTERFACE WITH_TBB)
+  target_compile_definitions(bf_deps_eigen INTERFACE EIGEN_HAS_TBB)
   target_include_directories(bf_deps_eigen SYSTEM INTERFACE ${TBB_INCLUDE_DIRS})
   target_link_libraries(bf_deps_eigen INTERFACE ${TBB_LIBRARIES})
 endif()
@@ -275,7 +284,7 @@ endif()
 add_library(bf_deps_optional_pugixml INTERFACE)
 add_library(bf::dependencies::optional::pugixml ALIAS bf_deps_optional_pugixml)
 
-if(WITH_PUGIXML)
+if(WITH_CYCLES_PUGIXML)
   target_compile_definitions(bf_deps_optional_pugixml INTERFACE WITH_PUGIXML)
   target_include_directories(bf_deps_optional_pugixml SYSTEM INTERFACE ${PUGIXML_INCLUDE_DIR})
   target_link_libraries(bf_deps_optional_pugixml INTERFACE ${PUGIXML_LIBRARIES})
@@ -314,6 +323,38 @@ if(WITH_VULKAN_BACKEND)
   target_compile_definitions(bf_deps_optional_shaderc INTERFACE WITH_SHADERC)
   target_include_directories(bf_deps_optional_shaderc SYSTEM INTERFACE ${SHADERC_INCLUDE_DIRS})
   target_link_libraries(bf_deps_optional_shaderc INTERFACE ${SHADERC_LIBRARIES})
+endif()
+
+# -----------------------------------------------------------------------------
+# Configure Embree
+
+add_library(bf_deps_optional_embree INTERFACE)
+add_library(bf::dependencies::optional::embree ALIAS bf_deps_optional_embree)
+
+if(WITH_CYCLES_EMBREE)
+  target_include_directories(bf_deps_optional_embree SYSTEM INTERFACE ${EMBREE_INCLUDE_DIRS})
+  target_link_libraries(bf_deps_optional_embree INTERFACE ${EMBREE_LIBRARIES})
+endif()
+
+# -----------------------------------------------------------------------------
+# Configure OpenPGL
+
+add_library(bf_deps_optional_openpgl INTERFACE)
+add_library(bf::dependencies::optional::openpgl ALIAS bf_deps_optional_openpgl)
+
+if(WITH_CYCLES_PATH_GUIDING)
+  target_include_directories(bf_deps_optional_openpgl SYSTEM INTERFACE ${OPENPGL_INCLUDE_DIR})
+  target_link_libraries(bf_deps_optional_openpgl INTERFACE ${OPENPGL_LIBRARIES})
+endif()
+
+# -----------------------------------------------------------------------------
+# Configure NanoVDB
+
+add_library(bf_deps_optional_nanovdb INTERFACE)
+add_library(bf::dependencies::optional::nanovdb ALIAS bf_deps_optional_nanovdb)
+
+if(WITH_NANOVDB)
+  target_include_directories(bf_deps_optional_nanovdb SYSTEM INTERFACE ${NANOVDB_INCLUDE_DIR})
 endif()
 
 # -----------------------------------------------------------------------------
@@ -435,14 +476,20 @@ endif()
 # Configure libfmt
 #
 
-#add_library(bf::dependencies::fmt ALIAS fmt::fmt)
+add_library(bf::dependencies::fmt ALIAS fmt::fmt)
 
 # -----------------------------------------------------------------------------
 # Configure OSL
 
 if(WITH_CYCLES_OSL)
   add_library(bf_deps_optional_osl INTERFACE)
-  target_link_libraries(bf_deps_optional_osl INTERFACE OSL::oslcomp OSL::oslquery OSL::oslexec OSL::oslnoise)
+  target_link_libraries(bf_deps_optional_osl INTERFACE OSL::oslcomp OSL::oslquery OSL::oslnoise)
+  # Link oslexec with the -force_load flag on macOS.
+  if(APPLE)
+    target_link_libraries(bf_deps_optional_osl INTERFACE -force_load OSL::oslexec)
+  else()
+    target_link_libraries(bf_deps_optional_osl INTERFACE OSL::oslexec)
+  endif()
   add_library(bf::dependencies::optional::osl ALIAS bf_deps_optional_osl)
   get_target_property(OSL_COMPILER OSL::oslc LOCATION)
 else()

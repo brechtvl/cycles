@@ -103,6 +103,7 @@ target_compile_definitions(cycles_hydra
 target_link_libraries(cycles_hydra
   PUBLIC
   bf::dependencies::openimageio
+  bf::dependencies::optional::tbb
   bf::dependencies::optional::usd
   bf::dependencies::optional::python
   PRIVATE
