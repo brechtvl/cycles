@@ -82,7 +82,7 @@ elseif(MSVC)
   # Make Visual Studio Report __cplusplus version.
   string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus")
 
-  add_definitions(-D_USE_MATH_DEFINES)
+  add_definitions(-D_USE_MATH_DEFINES -DWIN32_LEAN_AND_MEAN -DNOMINMAX)
 endif()
 
 # Enable SSE2NEON SIMD support if found.
