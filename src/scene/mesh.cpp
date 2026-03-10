@@ -788,20 +788,16 @@ void Mesh::update_generated(Scene *scene)
     return;
   }
 
-  /* Create generated attribute if needed and missing. This is run after tessellation,
-   * so it only affects attributes and not subd_attributes.
-   *
-   * TODO: We could save memory and not store this, but would need to fall back to the
-   * position everywhere, or the undisplaced position in case of displacement. */
-  if (!need_attribute(scene, ATTR_STD_GENERATED) || attributes.find(ATTR_STD_GENERATED)) {
-    return;
-  }
+  AttributeSet &attrs = num_subd_faces ? subd_attributes : attributes;
 
-  const size_t verts_size = verts.size();
-  Attribute *attr_generated = attributes.add(ATTR_STD_GENERATED);
-  float3 *generated = attr_generated->data_float3();
-  for (size_t i = 0; i < verts_size; ++i) {
-    generated[i] = verts[i];
+  /* apply generated attributes if needed or missing */
+  if (need_attribute(scene, ATTR_STD_GENERATED) && !attrs.find(ATTR_STD_GENERATED)) {
+    const size_t verts_size = verts.size();
+    Attribute *attr_generated = attrs.add(ATTR_STD_GENERATED);
+    float3 *generated = attr_generated->data_float3();
+    for (size_t i = 0; i < verts_size; ++i) {
+      generated[i] = verts[i];
+    }
   }
 }
 
@@ -811,7 +807,6 @@ void Mesh::update_tangents(Scene *scene, bool undisplaced)
     return;
   }
 
-  /* This runs after tessellation, so it only affects attributes and not subd_attributes. */
   assert(attributes.find(ATTR_STD_VERTEX_NORMAL));
 
   ccl::set<ustring> uv_maps;
@@ -837,7 +832,7 @@ void Mesh::update_tangents(Scene *scene, bool undisplaced)
                           tangent_sign_postfix); /* sign */
   }
 
-  /* Other UV attributes. */
+  /* now generate for any other UVs requested */
   for (Attribute &attr : attributes.attributes) {
     if (!(attr.type == TypeFloat2 && attr.element == ATTR_ELEMENT_CORNER)) {
       continue;

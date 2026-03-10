@@ -7606,10 +7606,13 @@ void NormalMapNode::attributes(Shader *shader, AttributeRequestSet *attributes)
 {
   if (shader->has_surface_link() && space == NODE_NORMAL_MAP_TANGENT) {
     if (attribute.empty()) {
+      /* We don't need the UV ourselves, but we need to compute the tangent from it. */
+      attributes->add(ATTR_STD_UV);
       attributes->add(ATTR_STD_UV_TANGENT_UNDISPLACED);
       attributes->add(ATTR_STD_UV_TANGENT_SIGN_UNDISPLACED);
     }
     else {
+      attributes->add(attribute);
       attributes->add(ustring((string(attribute.c_str()) + ".undisplaced_tangent").c_str()));
       attributes->add(ustring((string(attribute.c_str()) + ".undisplaced_tangent_sign").c_str()));
     }
@@ -7750,9 +7753,12 @@ void TangentNode::attributes(Shader *shader, AttributeRequestSet *attributes)
   if (shader->has_surface_link()) {
     if (direction_type == NODE_TANGENT_UVMAP) {
       if (attribute.empty()) {
+        /* We don't need the UV ourselves, but we need to compute the tangent from it. */
+        attributes->add(ATTR_STD_UV);
         attributes->add(ATTR_STD_UV_TANGENT);
       }
       else {
+        attributes->add(attribute);
         attributes->add(ustring((string(attribute.c_str()) + ".tangent").c_str()));
       }
     }
@@ -7934,10 +7940,12 @@ void VectorDisplacementNode::attributes(Shader *shader, AttributeRequestSet *att
 {
   if (shader->has_surface_link() && space == NODE_NORMAL_MAP_TANGENT) {
     if (attribute.empty()) {
+      attributes->add(ATTR_STD_UV);
       attributes->add(ATTR_STD_UV_TANGENT_UNDISPLACED);
       attributes->add(ATTR_STD_UV_TANGENT_SIGN_UNDISPLACED);
     }
     else {
+      attributes->add(attribute);
       attributes->add(ustring((string(attribute.c_str()) + ".undisplaced_tangent").c_str()));
       attributes->add(ustring((string(attribute.c_str()) + ".undisplaced_tangent_sign").c_str()));
     }

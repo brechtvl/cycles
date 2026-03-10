@@ -20,6 +20,7 @@ set(LIB
   cycles_session
   cycles_graph
   ${Epoxy_LIBRARIES}
+  ${BOOST_PYTHON_LIBRARIES}
 )
 cycles_external_libraries_append(LIB)
 
@@ -116,11 +117,6 @@ if(WITH_CYCLES_HYDRA_RENDER_DELEGATE)
   )
   set(HdCyclesPluginName hdCycles)
   add_library(${HdCyclesPluginName} SHARED ${SRC_HD_CYCLES_PLUGIN})
-  cycles_install_libraries("houdini/dso/usd_plugins/")
-
-  if(APPLE)
-    set_target_properties(${HdCyclesPluginName} PROPERTIES BUILD_WITH_INSTALL_RPATH true)
-  endif()
 
   set_target_properties(${HdCyclesPluginName}
     PROPERTIES PREFIX ""
@@ -156,9 +152,8 @@ if(WITH_CYCLES_HYDRA_RENDER_DELEGATE)
     )
   endif()
 
-  if(HOUDINI_ROOT)
-    set(CYCLES_HYDRA_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/houdini/dso/usd_plugins)
-  elseif(WITH_CYCLES_BLENDER)
+
+  if(WITH_CYCLES_BLENDER)
     # Install inside add-on
     set(CYCLES_HYDRA_INSTALL_PATH ${CYCLES_INSTALL_PATH}/hydra)
   else()
@@ -196,13 +191,6 @@ if(WITH_CYCLES_HYDRA_RENDER_DELEGATE)
     ${CMAKE_CURRENT_BINARY_DIR}/resources/plugInfo.json
     @ONLY
   )
-  configure_file(resources/cycles.json
-    ${CMAKE_CURRENT_BINARY_DIR}/resources/cycles.json
-    @ONLY
-  )
 
   delayed_install("${CMAKE_CURRENT_BINARY_DIR}/resources" "plugInfo.json" "${CYCLES_HYDRA_INSTALL_PATH}/${HdCyclesPluginName}/resources")
-  if(HOUDINI_ROOT)
-    delayed_install("${CMAKE_CURRENT_BINARY_DIR}/resources" "cycles.json" "${CMAKE_INSTALL_PREFIX}/houdini/packages")
-  endif()
 endif()

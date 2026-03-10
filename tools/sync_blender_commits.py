@@ -19,8 +19,8 @@ import sys
 IGNORE_HASHES = {}
 
 # Start revisions from both repositories.
-CYCLES_START_COMMIT = "main"
-BLENDER_START_COMMIT = "8c77f964464a54c7dd06b36e6d041b4305d260a2"
+CYCLES_START_COMMIT = "maybe-this-one3"
+BLENDER_START_COMMIT = "01806a62e34e83f97d3a39abe3b656e8f52257ba"
 
 # Prefix which is common for all the subjects.
 GIT_SUBJECT_COMMON_PREFIX = "Subject: [PATCH] "
