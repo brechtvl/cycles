@@ -71,6 +71,12 @@ macro(cycles_add_library target library_deps)
     endforeach()
   endif()
 
+  # On windows vcpkg goes out of its way to make its libs the preferred
+  # libs, and needs to be explicitly be told not to do that.
+  if(WIN32)
+    set_target_properties(${target} PROPERTIES VS_GLOBAL_VcpkgEnabled "false")
+  endif()
+
   cycles_set_solution_folder(${target})
 endmacro()
 
@@ -86,7 +92,7 @@ macro(cycles_external_libraries_append libraries)
     endif()
   endif()
   if(WITH_CYCLES_OSL)
-    list(APPEND ${libraries} ${OSL_LIBRARIES})
+    list(APPEND ${libraries} bf::dependencies::optional::osl)
   endif()
   if(WITH_CYCLES_EMBREE)
     list(APPEND ${libraries} ${EMBREE_LIBRARIES})
@@ -128,20 +134,17 @@ macro(cycles_external_libraries_append libraries)
     list(APPEND ${libraries} "-lm -lc -lutil")
   endif()
   list(APPEND ${libraries}
-    ${OPENIMAGEIO_LIBRARIES}
+    bf::dependencies::openimageio
     ${PNG_LIBRARIES}
     ${JPEG_LIBRARIES}
     ${TIFF_LIBRARY}
     ${OPENJPEG_LIBRARIES}
-    ${OPENEXR_LIBRARIES}
-    ${OPENEXR_LIBRARIES} # For circular dependencies between libs.
+    bf::dependencies::optional::openexr
     ${PUGIXML_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${CMAKE_DL_LIBS}
   )
-  if(NOT WITH_PYTHON_MODULE)
-    list(APPEND ${libraries} ${PYTHON_LIBRARIES})
-  endif()
+  list(APPEND ${libraries} bf::dependencies::optional::python)
 
   if(DEFINED PTHREADS_LIBRARIES)
     list(APPEND ${libraries}
@@ -181,18 +184,24 @@ macro(cycles_external_libraries_append libraries)
   endif()
 endmacro()
 
-macro(cycles_install_libraries target_dir)
-  # Install shared libraries.
-  install(
-    FILES ${PLATFORM_BUNDLED_LIBRARIES_RELEASE}
-    DESTINATION "${target_dir}${PLATFORM_LIB_INSTALL_DIR}"
-    CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
-  )
-  install(
-    FILES ${PLATFORM_BUNDLED_LIBRARIES_DEBUG}
-    DESTINATION "${target_dir}${PLATFORM_LIB_INSTALL_DIR}"
-    CONFIGURATIONS Debug
-  )
+macro(cycles_install_libraries target)
+  # Install bundled shared libraries next to the binary.
+  if(PLATFORM_BUNDLED_LIBRARIES_RELEASE)
+    if(WIN32)
+      install(
+        FILES ${PLATFORM_BUNDLED_LIBRARIES_RELEASE}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PLATFORM_LIB_INSTALL_DIR}
+        CONFIGURATIONS Release RelWithDebInfo MinSizeRel)
+      install(
+        FILES ${PLATFORM_BUNDLED_LIBRARIES_DEBUG}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PLATFORM_LIB_INSTALL_DIR}
+        CONFIGURATIONS Debug)
+    else()
+      install(
+        FILES ${PLATFORM_BUNDLED_LIBRARIES_RELEASE}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${PLATFORM_LIB_INSTALL_DIR})
+    endif()
+  endif()
 endmacro()
 
 macro(set_and_warn_library_found

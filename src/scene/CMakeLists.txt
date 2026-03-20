@@ -4,8 +4,8 @@
 
 set(INC
   ..
-  ../../third_party/sky/include
-  ../../third_party/mikktspace
+  ../../sky/include
+  ../../mikktspace
 )
 
 set(SRC
