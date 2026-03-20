@@ -99,6 +99,7 @@ if(EXISTS ${_cycles_lib_dir} AND WITH_LIBS_PRECOMPILED)
   _set_default(OPENIMAGEDENOISE_ROOT_DIR "${_cycles_lib_dir}/openimagedenoise")
   _set_default(OPENIMAGEIO_ROOT_DIR "${_cycles_lib_dir}/openimageio")
   _set_default(OPENJPEG_ROOT_DIR "${_cycles_lib_dir}/openjpeg")
+  _set_default(openjph_ROOT "${_cycles_lib_dir}/openjph")
   _set_default(OPENSUBDIV_ROOT_DIR "${_cycles_lib_dir}/opensubdiv")
   _set_default(OPENVDB_ROOT_DIR "${_cycles_lib_dir}/openvdb")
   _set_default(OSL_ROOT_DIR "${_cycles_lib_dir}/osl")
@@ -109,6 +110,7 @@ if(EXISTS ${_cycles_lib_dir} AND WITH_LIBS_PRECOMPILED)
   _set_default(TBB_ROOT_DIR "${_cycles_lib_dir}/tbb")
   _set_default(TIFF_ROOT "${_cycles_lib_dir}/tiff")
   _set_default(USD_ROOT_DIR "${_cycles_lib_dir}/usd")
+  _set_default(VULKAN_ROOT_DIR "${_cycles_lib_dir}/vulkan")
   _set_default(WEBP_ROOT_DIR "${_cycles_lib_dir}/webp")
   _set_default(ZLIB_ROOT "${_cycles_lib_dir}/zlib")
   _set_default(ZSTD_ROOT_DIR "${_cycles_lib_dir}/zstd")
@@ -188,9 +190,10 @@ if(WITH_USD)
   set(WITH_PYTHON ON)
 
   if(WIN32)
-    set(PYTHON_VERSION 3.11)
+    set(PYTHON_VERSION 3.13)
     string(REPLACE "." "" PYTHON_VERSION_NO_DOTS ${PYTHON_VERSION})
-    set(PYTHON_INCLUDE_DIRS ${PYTHON_ROOT_DIR}/${PYTHON_VERSION_NO_DOTS}/include)
+    set(PYTHON_INCLUDE_DIR ${PYTHON_ROOT_DIR}/${PYTHON_VERSION_NO_DOTS}/include)
+    set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIR})
     set(PYTHON_LIBRARIES
       optimized ${PYTHON_ROOT_DIR}/${PYTHON_VERSION_NO_DOTS}/libs/python${PYTHON_VERSION_NO_DOTS}.lib
       debug ${PYTHON_ROOT_DIR}/${PYTHON_VERSION_NO_DOTS}/libs/python${PYTHON_VERSION_NO_DOTS}_d.lib)
@@ -236,15 +239,8 @@ endif()
 ###########################################################################
 
 if(MSVC AND EXISTS ${_cycles_lib_dir})
-  set(OPENIMAGEIO_INCLUDE_DIR ${OPENIMAGEIO_ROOT_DIR}/include)
-  set(OPENIMAGEIO_INCLUDE_DIRS ${OPENIMAGEIO_INCLUDE_DIR} ${OPENIMAGEIO_INCLUDE_DIR}/OpenImageIO)
-  # Special exceptions for libraries which needs explicit debug version
-  set(OPENIMAGEIO_LIBRARIES
-    optimized ${OPENIMAGEIO_ROOT_DIR}/lib/OpenImageIO.lib
-    optimized ${OPENIMAGEIO_ROOT_DIR}/lib/OpenImageIO_Util.lib
-    debug ${OPENIMAGEIO_ROOT_DIR}/lib/OpenImageIO_d.lib
-    debug ${OPENIMAGEIO_ROOT_DIR}/lib/OpenImageIO_Util_d.lib
-  )
+  set(OpenImageIO_ROOT ${OPENIMAGEIO_ROOT_DIR})
+  find_package(OpenImageIO REQUIRED CONFIG)
 
   set(PUGIXML_INCLUDE_DIR ${PUGIXML_ROOT_DIR}/include)
   set(PUGIXML_LIBRARIES
@@ -252,7 +248,7 @@ if(MSVC AND EXISTS ${_cycles_lib_dir})
     debug ${PUGIXML_ROOT_DIR}/lib/pugixml_d.lib
   )
 else()
-  find_package(OpenImageIO REQUIRED)
+  find_package(OpenImageIO REQUIRED CONFIG)
   if(OPENIMAGEIO_PUGIXML_FOUND)
     set(PUGIXML_INCLUDE_DIR "${OPENIMAGEIO_INCLUDE_DIR}/OpenImageIO")
     set(PUGIXML_LIBRARIES "")
@@ -280,6 +276,7 @@ find_package(PNG REQUIRED)
 
 if(WIN32)
   add_bundled_libraries(openimageio/bin)
+  add_bundled_libraries(aom/bin)
 else()
   add_bundled_libraries(openimageio/lib)
 endif()
@@ -289,20 +286,9 @@ endif()
 ###########################################################################
 
 if(MSVC AND EXISTS ${_cycles_lib_dir})
-  set(OPENEXR_INCLUDE_DIR ${OPENEXR_ROOT_DIR}/include)
-  set(OPENEXR_INCLUDE_DIRS ${OPENEXR_INCLUDE_DIR} ${OPENEXR_ROOT_DIR}/include/OpenEXR ${IMATH_ROOT_DIR}/include ${IMATH_ROOT_DIR}/include/Imath)
-  set(OPENEXR_LIBRARIES
-    optimized ${OPENEXR_ROOT_DIR}/lib/OpenEXR.lib
-    optimized ${OPENEXR_ROOT_DIR}/lib/OpenEXRCore.lib
-    optimized ${OPENEXR_ROOT_DIR}/lib/Iex.lib
-    optimized ${IMATH_ROOT_DIR}/lib/Imath.lib
-    optimized ${OPENEXR_ROOT_DIR}/lib/IlmThread.lib
-    debug ${OPENEXR_ROOT_DIR}/lib/OpenEXR_d.lib
-    debug ${OPENEXR_ROOT_DIR}/lib/OpenEXRCore_d.lib
-    debug ${OPENEXR_ROOT_DIR}/lib/Iex_d.lib
-    debug ${IMATH_ROOT_DIR}/lib/Imath_d.lib
-    debug ${OPENEXR_ROOT_DIR}/lib/IlmThread_d.lib
-    )
+  set(OpenEXR_ROOT ${OPENEXR_ROOT_DIR})
+  set(Imath_ROOT ${IMATH_ROOT_DIR})
+  find_package(OpenEXR REQUIRED CONFIG)
 else()
   find_package(OpenEXR REQUIRED)
 endif()
@@ -314,6 +300,11 @@ else()
 	add_bundled_libraries(openexr/lib)
 	add_bundled_libraries(imath/lib)
 endif()
+if(WIN32)
+  add_bundled_libraries(openjph/bin)
+else()
+  add_bundled_libraries(openjph/lib)
+endif()
 
 ###########################################################################
 # OpenShadingLanguage
@@ -321,49 +312,15 @@ endif()
 
 if(WITH_CYCLES_OSL)
 	if(MSVC AND EXISTS ${_cycles_lib_dir})
+		set(OSL_ROOT ${OSL_ROOT_DIR})
+		find_package(OSL REQUIRED CONFIG)
+
 		set(OSL_SHADER_DIR ${OSL_ROOT_DIR}/shaders)
 		if(NOT EXISTS "${OSL_SHADER_DIR}")
 			set(OSL_SHADER_DIR ${OSL_ROOT_DIR}/share/OSL/shaders)
 		endif()
-		find_library(OSL_LIB_EXEC NAMES oslexec PATHS ${OSL_ROOT_DIR}/lib)
-		find_library(OSL_LIB_COMP NAMES oslcomp PATHS ${OSL_ROOT_DIR}/lib)
-		find_library(OSL_LIB_QUERY NAMES oslquery PATHS ${OSL_ROOT_DIR}/lib)
-		find_library(OSL_LIB_NOISE NAMES oslnoise PATHS ${OSL_ROOT_DIR}/lib)
-		find_library(OSL_LIB_EXEC_DEBUG NAMES oslexec_d PATHS ${OSL_ROOT_DIR}/lib)
-		find_library(OSL_LIB_COMP_DEBUG NAMES oslcomp_d PATHS ${OSL_ROOT_DIR}/lib)
-		find_library(OSL_LIB_QUERY_DEBUG NAMES oslquery_d PATHS ${OSL_ROOT_DIR}/lib)
-		find_library(OSL_LIB_NOISE_DEBUG NAMES oslnoise_d PATHS ${OSL_ROOT_DIR}/lib)
-		list(APPEND OSL_LIBRARIES
-			optimized ${OSL_LIB_COMP}
-			optimized ${OSL_LIB_EXEC}
-			optimized ${OSL_LIB_QUERY}
-			debug ${OSL_LIB_EXEC_DEBUG}
-			debug ${OSL_LIB_COMP_DEBUG}
-			debug ${OSL_LIB_QUERY_DEBUG}
-			${PUGIXML_LIBRARIES}
-			)
-		if(OSL_LIB_NOISE)
-			list(APPEND OSL_LIBRARIES optimized ${OSL_LIB_NOISE})
-		endif()
-		if(OSL_LIB_NOISE_DEBUG)
-			list(APPEND OSL_LIBRARIES debug ${OSL_LIB_NOISE_DEBUG})
-		endif()
-		find_path(OSL_INCLUDE_DIR OSL/oslclosure.h PATHS ${OSL_ROOT_DIR}/include)
-		find_program(OSL_COMPILER NAMES oslc PATHS ${OSL_ROOT_DIR}/bin)
-		file(STRINGS "${OSL_INCLUDE_DIR}/OSL/oslversion.h" OSL_LIBRARY_VERSION_MAJOR
-		     REGEX "^[ \t]*#define[ \t]+OSL_LIBRARY_VERSION_MAJOR[ \t]+[0-9]+.*$")
-		file(STRINGS "${OSL_INCLUDE_DIR}/OSL/oslversion.h" OSL_LIBRARY_VERSION_MINOR
-		     REGEX "^[ \t]*#define[ \t]+OSL_LIBRARY_VERSION_MINOR[ \t]+[0-9]+.*$")
-		file(STRINGS "${OSL_INCLUDE_DIR}/OSL/oslversion.h" OSL_LIBRARY_VERSION_PATCH
-		     REGEX "^[ \t]*#define[ \t]+OSL_LIBRARY_VERSION_PATCH[ \t]+[0-9]+.*$")
-		string(REGEX REPLACE ".*#define[ \t]+OSL_LIBRARY_VERSION_MAJOR[ \t]+([.0-9]+).*"
-		       "\\1" OSL_LIBRARY_VERSION_MAJOR ${OSL_LIBRARY_VERSION_MAJOR})
-		string(REGEX REPLACE ".*#define[ \t]+OSL_LIBRARY_VERSION_MINOR[ \t]+([.0-9]+).*"
-		       "\\1" OSL_LIBRARY_VERSION_MINOR ${OSL_LIBRARY_VERSION_MINOR})
-		string(REGEX REPLACE ".*#define[ \t]+OSL_LIBRARY_VERSION_PATCH[ \t]+([.0-9]+).*"
-		       "\\1" OSL_LIBRARY_VERSION_PATCH ${OSL_LIBRARY_VERSION_PATCH})
 	else()
-		find_package(OSL REQUIRED)
+    find_package(OSL REQUIRED CONFIG)
 	endif()
 endif()
 
@@ -716,6 +673,14 @@ else()
 endif()
 
 if(WITH_USD)
+  if(WIN32)
+    add_bundled_libraries(vulkan/bin)
+  elseif(UNIX AND NOT APPLE)
+    add_bundled_libraries(vulkan/lib)
+  endif()
+endif()
+
+if(WITH_USD)
   if(DEFINED _cycles_lib_dir)
     # USD linking needs to be able to find MaterialX libraries.
     link_directories(${MATERIALX_ROOT_DIR}/lib)
@@ -729,6 +694,11 @@ if(WITH_USD)
         MaterialXGenGlsl
         MaterialXGenMsl
       )
+      # USD is built with Vulkan support, link the library.
+      find_package(Vulkan)
+      if(VULKAN_FOUND)
+        list(APPEND USD_LIBRARIES ${VULKAN_LIBRARIES})
+      endif()
     endif()
   endif()
 endif()
@@ -749,15 +719,15 @@ endif()
 ###########################################################################
 
 # Check for ARM Neon Support
-if(NOT DEFINED SUPPORT_NEON_BUILD)
+if(NOT DEFINED SUPPORTS_NEON_BUILD)
   include(CheckCXXSourceCompiles)
   check_cxx_source_compiles(
     "#include <arm_neon.h>
      int main() {return vaddvq_s32(vdupq_n_s32(1));}"
-    SUPPORT_NEON_BUILD)
+    SUPPORTS_NEON_BUILD)
 endif()
 
-if(SUPPORT_NEON_BUILD)
+if(SUPPORTS_NEON_BUILD)
   if(WIN32 AND DEFINED _cycles_lib_dir)
     set(SSE2NEON_INCLUDE_DIRS ${SSE2NEON_ROOT_DIR})
     set(SSE2NEON_FOUND True)
@@ -864,53 +834,54 @@ if(WITH_CYCLES_DEVICE_ONEAPI OR EMBREE_SYCL_SUPPORT)
       set(WITH_CYCLES_DEVICE_ONEAPI OFF)
     endif()
   endif()
-
-  if(DEFINED SYCL_ROOT_DIR)
-    if(WIN32)
-      if(_cycles_use_legacy_libs)
-        list(APPEND PLATFORM_BUNDLED_LIBRARIES_RELEASE
-          ${SYCL_ROOT_DIR}/bin/sycl7.dll
-          ${SYCL_ROOT_DIR}/bin/pi_level_zero.dll
-          ${SYCL_ROOT_DIR}/bin/pi_win_proxy_loader.dll)
-        list(APPEND PLATFORM_BUNDLED_LIBRARIES_DEBUG
-          ${SYCL_ROOT_DIR}/bin/sycl7d.dll
-          ${SYCL_ROOT_DIR}/bin/pi_level_zero.dll
-          ${SYCL_ROOT_DIR}/bin/pi_win_proxy_loaderd.dll)
-      else()
-        list(APPEND PLATFORM_BUNDLED_LIBRARIES_RELEASE
-          ${SYCL_ROOT_DIR}/bin/sycl8.dll
-          ${SYCL_ROOT_DIR}/bin/ur_adapter_level_zero.dll
-          ${SYCL_ROOT_DIR}/bin/ur_loader.dll
-          ${SYCL_ROOT_DIR}/bin/ur_win_proxy_loader.dll)
-        list(APPEND PLATFORM_BUNDLED_LIBRARIES_DEBUG
-          ${SYCL_ROOT_DIR}/bin/sycl8d.dll
-          ${SYCL_ROOT_DIR}/bin/ur_adapter_level_zero.dll
-          ${SYCL_ROOT_DIR}/bin/ur_loader.dll
-          ${SYCL_ROOT_DIR}/bin/ur_win_proxy_loaderd.dll)
-      endif()
-    else()
-      if(_cycles_use_legacy_libs)
-        file(GLOB _sycl_runtime_libraries
-          ${SYCL_ROOT_DIR}/lib/libsycl.so
-          ${SYCL_ROOT_DIR}/lib/libsycl.so.*
-          ${SYCL_ROOT_DIR}/lib/libpi_*.so
-        )
-      else()
-        file(GLOB _sycl_runtime_libraries
-          ${SYCL_ROOT_DIR}/lib/libsycl.so
-          ${SYCL_ROOT_DIR}/lib/libsycl.so.*
-          ${SYCL_ROOT_DIR}/lib/libur_*.so
-          ${SYCL_ROOT_DIR}/lib/libur_*.so.*
-        )
-      endif()
-      list(FILTER _sycl_runtime_libraries EXCLUDE REGEX ".*\.py")
-      list(REMOVE_ITEM _sycl_runtime_libraries "${SYCL_ROOT_DIR}/lib/libpi_opencl.so")
-      list(APPEND PLATFORM_BUNDLED_LIBRARIES_RELEASE ${_sycl_runtime_libraries})
-      list(APPEND PLATFORM_BUNDLED_LIBRARIES_DEBUG ${_sycl_runtime_libraries})
-      unset(_sycl_runtime_libraries)
-  endif()
 endif()
 
+# add_bundled_libraries for SYCL, but custom since we need to filter the files.
+if(DEFINED SYCL_ROOT_DIR)
+  if(WIN32)
+    set(_sycl_library_dir ${SYCL_ROOT_DIR}/bin)
+    file(GLOB _sycl_runtime_libraries
+      ${_sycl_library_dir}/sycl*.dll
+      ${_sycl_library_dir}/pi_*.dll
+      ${_sycl_library_dir}/ur_*.dll
+    )
+    foreach(_bundled_lib ${_sycl_runtime_libraries})
+      if(${_bundled_lib} MATCHES "_d.dll$")
+        list(APPEND PLATFORM_BUNDLED_LIBRARIES_DEBUG ${_bundled_lib})
+      else()
+        list(APPEND PLATFORM_BUNDLED_LIBRARIES_RELEASE ${_bundled_lib})
+      endif()
+    endforeach()
+  else()
+    set(_sycl_library_dir ${SYCL_ROOT_DIR}/lib)
+    file(GLOB _sycl_runtime_libraries
+      ${_sycl_library_dir}/libsycl.so
+      ${_sycl_library_dir}/libsycl.so.*
+      ${_sycl_library_dir}/libpi_*.so
+      ${_sycl_library_dir}/libur_*.so
+      ${_sycl_library_dir}/libur_*.so.*
+    )
+    list(FILTER _sycl_runtime_libraries EXCLUDE REGEX "\\.py$")
+    list(APPEND PLATFORM_BUNDLED_LIBRARIES_RELEASE ${_sycl_runtime_libraries})
+    list(APPEND PLATFORM_BUNDLED_LIBRARIES_DEBUG ${_sycl_runtime_libraries})
+  endif()
+  if(_sycl_runtime_libraries)
+    list(APPEND PLATFORM_BUNDLED_LIBRARY_DIRS ${_sycl_library_dir})
+  endif()
+  unset(_sycl_library_dir)
+  unset(_sycl_runtime_libraries)
+endif()
+
+if(WIN32 AND DEFINED LEVEL_ZERO_ROOT_DIR)
+  file(GLOB _ze_runtime_libraries ${LEVEL_ZERO_ROOT_DIR}/bin/*.dll)
+  foreach(_bundled_lib ${_ze_runtime_libraries})
+    if(${_bundled_lib} MATCHES "_d.dll$")
+      list(APPEND PLATFORM_BUNDLED_LIBRARIES_DEBUG ${_bundled_lib})
+    else()
+      list(APPEND PLATFORM_BUNDLED_LIBRARIES_RELEASE ${_bundled_lib})
+    endif()
+  endforeach()
+  unset(_ze_runtime_libraries)
 endif()
 
 if(WITH_CYCLES_DEVICE_ONEAPI AND WITH_CYCLES_ONEAPI_BINARIES)
@@ -978,6 +949,11 @@ elseif(APPLE)
   set(CMAKE_SKIP_INSTALL_RPATH FALSE)
   list(APPEND CMAKE_INSTALL_RPATH "@loader_path/${PLATFORM_LIB_INSTALL_DIR}")
 
+  # For build binaries, add the original directory of all shared libraries to
+  # the rpath so they can find their dependencies without environment variables.
+  set(CMAKE_SKIP_BUILD_RPATH FALSE)
+  list(APPEND CMAKE_BUILD_RPATH ${PLATFORM_BUNDLED_LIBRARY_DIRS})
+
   # Environment variables to run precompiled executables that needed libraries.
   list(JOIN PLATFORM_BUNDLED_LIBRARY_DIRS ":" _library_paths)
   set(PLATFORM_ENV_BUILD "DYLD_LIBRARY_PATH=\"${_library_paths};${DYLD_LIBRARY_PATH}\"")
@@ -987,6 +963,11 @@ elseif(UNIX)
   # For install step, set rpath relative to where shared libs will be copied.
   set(CMAKE_SKIP_INSTALL_RPATH FALSE)
   list(APPEND CMAKE_INSTALL_RPATH $ORIGIN/${PLATFORM_LIB_INSTALL_DIR})
+
+  # For build binaries, add the original directory of all shared libraries to
+  # the rpath so they can find their dependencies without environment variables.
+  set(CMAKE_SKIP_BUILD_RPATH FALSE)
+  list(APPEND CMAKE_BUILD_RPATH ${PLATFORM_BUNDLED_LIBRARY_DIRS})
 
   # Environment variables to run precompiled executables that needed libraries.
   list(JOIN PLATFORM_BUNDLED_LIBRARY_DIRS ":" _library_paths)

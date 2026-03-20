@@ -19,7 +19,7 @@
 #                         search for glog includes, e.g: /timbuktu/include.
 # GLOG_LIBRARY_DIR_HINTS: List of additional directories in which to
 #                         search for glog libraries, e.g: /timbuktu/lib.
-# GFLOG_ROOT_DIR,         The base directory to search for Glog.
+# GLOG_ROOT_DIR,          The base directory to search for Glog.
 #                         This can also be an environment variable.
 #
 # The following variables are also defined by this module, but in line with
@@ -54,15 +54,21 @@ endif()
 
 # Reset CALLERS_CMAKE_FIND_LIBRARY_PREFIXES to its value when
 # FindGlog was invoked.
+#
+# NOTE: must be a macro, modifies `CMAKE_FIND_LIBRARY_PREFIXES`
+# in the caller's scope to restore the original value.
 macro(GLOG_RESET_FIND_LIBRARY_PREFIX)
   if(MSVC)
     set(CMAKE_FIND_LIBRARY_PREFIXES "${CALLERS_CMAKE_FIND_LIBRARY_PREFIXES}")
   endif()
 endmacro()
 
-# Called if we failed to find glog or any of it's required dependencies,
+# Called if we failed to find glog or any of its required dependencies,
 # unsets all public (designed to be used externally) variables and reports
 # error message at priority depending upon [REQUIRED/QUIET/<NONE>] argument.
+#
+# NOTE: must be a macro, uses `return()` to exit the calling Find module's
+# scope. A function's `return()` would only exit the function itself.
 macro(GLOG_REPORT_NOT_FOUND REASON_MSG)
   unset(GLOG_FOUND)
   unset(GLOG_INCLUDE_DIRS)
@@ -122,7 +128,7 @@ list(APPEND GLOG_CHECK_LIBRARY_DIRS
   /usr/local/homebrew/lib # Mac OS X.
   /opt/local/lib
   /usr/lib
-  /opt/lib/gflags/lib)
+  /opt/lib/glog/lib)
 # Windows (for C:/Program Files prefix).
 list(APPEND GLOG_CHECK_LIBRARY_SUFFIXES
   glog/lib
